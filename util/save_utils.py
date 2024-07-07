@@ -61,6 +61,7 @@ def save_current_results(self, visuals, epoch, name=None): #这个是train里存
     """
     
     for label, image in visuals.items():
+        
         img = tensor2img(image, invert=True)
         img_path = os.path.join(self.img_dir, '%s_epoch%.3d_%s.png' % (name, epoch, label))
         img.save(img_path) 
