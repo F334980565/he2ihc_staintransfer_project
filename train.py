@@ -23,7 +23,7 @@ import collections
 from options.train_options import TrainOptions
 from data import create_dataset
 from models import create_model
-from util import save_utils
+from util.utils import Logger
 
 if __name__ == '__main__':
     opt = TrainOptions().parse()   # get training options
@@ -33,6 +33,7 @@ if __name__ == '__main__':
     
     model = create_model(opt)      # create a model given opt.model and other options
     model.setup(opt)               # regular setup: load and print networks; create schedulers
+    logger = Logger(opt) 
     total_iters = 0                # the total number of training iterations
 
     for epoch in range(opt.epoch_count, opt.n_epochs + opt.n_epochs_decay + 1):    # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
@@ -58,11 +59,11 @@ if __name__ == '__main__':
                 save_result = total_iters % opt.update_html_freq == 0
                 model.compute_visuals() 
                 visual_ret, slice_name = model.get_current_visuals()
-                save_utils.save_current_results(visual_ret, epoch, slice_name) #这里具体怎么存，还得好好写写
+                logger.save_current_results(visual_ret, epoch, slice_name) #这里具体怎么存，还得好好写写
 
             if total_iters % opt.print_freq == 0:    # print training losses and save logging information to the disk 
                 t_comp = (time.time() - iter_start_time) / opt.batch_size
-                save_utils.print_current_losses(epoch, epoch_iter, losses, t_comp, t_data)
+                logger.print_current_losses(epoch, epoch_iter, losses, t_comp, t_data)
 
             if total_iters % opt.save_latest_freq == 0:   # cache our latest model every <save_latest_freq> iterations
                 print('saving the latest model (epoch %d, total_iters %d)' % (epoch, total_iters))
@@ -77,7 +78,7 @@ if __name__ == '__main__':
         for k, v in epoch_losses.items():
             epoch_losses[k] = epoch_losses[k] / run_iter
     
-        save_utils.print_epoch_losses(epoch, run_iter, losses)
+        logger.print_epoch_losses(epoch, run_iter, losses)
         
         if epoch % opt.save_epoch_freq == 0:              # cache our model every <save_epoch_freq> epochs
             print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))

@@ -30,9 +30,7 @@ import os
 from options.test_options import TestOptions
 from data import create_dataset
 from models import create_model
-from util import save_utils
-
-# test_beta2到test_beta3就是save_image那里改了一下
+from util import utils
 
 if __name__ == '__main__':
     opt = TestOptions().parse()  # get test options
@@ -62,4 +60,4 @@ if __name__ == '__main__':
         img_path = model.get_image_paths()     # get image paths
         if i % 5 == 0:  # save images to an HTML file
             print('processing (%04d)-th image... %s' % (i, img_path))
-        save_utils.save_images(visuals, img_path, save_path)
+        utils.save_images(visuals, img_path, save_path)
