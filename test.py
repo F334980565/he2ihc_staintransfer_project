@@ -30,7 +30,7 @@ import os
 from options.test_options import TestOptions
 from data import create_dataset
 from models import create_model
-from util import utils
+from util.utils import Logger
 
 if __name__ == '__main__':
     opt = TestOptions().parse()  # get test options
@@ -42,6 +42,7 @@ if __name__ == '__main__':
     dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
     model = create_model(opt)      # create a model given opt.model and other options
     model.setup(opt)               # regular setup: load and print networks; create schedulers
+    logger = Logger(opt)
 
     # create a website
     save_path = os.path.join(opt.results_dir, opt.name, '{}_{}'.format(opt.phase, opt.epoch), 'images')
@@ -60,4 +61,5 @@ if __name__ == '__main__':
         img_path = model.get_image_paths()     # get image paths
         if i % 5 == 0:  # save images to an HTML file
             print('processing (%04d)-th image... %s' % (i, img_path))
-        utils.save_images(visuals, img_path, save_path)
+        print(img_path)
+        logger.save_images(visuals, img_path, save_path)

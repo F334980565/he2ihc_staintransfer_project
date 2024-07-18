@@ -237,3 +237,6 @@ class consistcycleModel(BaseModel):
                 visual_ret[name] = getattr(self, name)
   
         return visual_ret, slice_name
+    
+    def get_image_paths(self):
+        return self.ihc_path

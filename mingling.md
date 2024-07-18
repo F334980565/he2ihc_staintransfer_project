@@ -423,8 +423,9 @@ python test_beta3.py --name betatest_P63fenlei --model ttttthe2ihc --dataset_mod
 python test_beta3.py --name betatest_P63fenlei --model ttttthe2ihc --dataset_mode he2ihctttt --gpu_ids 1 --batch_size 1 --netG resnet_9blocks --preprocess resize --load_size 512 --src_path /root/projects/wu/Dataset/test_P63_FROZEN --predict_path /root/projects/wu/classify_project/probs_save/HE_probs_2_FROZEN_test/csv/probs.csv  --slice_list B008490_frozen B008330_frozen B008243_frozen B008012_frozen B007928_frozen  --num_test 10000000 --results_dir ./results/test_P63_FROZEN --epoch 80
 
 ## consist model训练
-python train_beta2.py --name Consist --model consistcycle --dataset_mode consist --gpu_ids 0 --batch_size 1 --netG resnet_6blocks --preprocess resize --load_size 512 --src_path /root/projects/wu/Dataset/P63_ruxian_1024 --n_epochs 30 --n_epochs_decay 30
+python train.py --name betatest_consist --model consistcycle --dataset_mode consist --gpu_ids 0 --batch_size 1 --netG resnet_6blocks --preprocess resize --load_size 512 --src_path /home/s611/Projects/wu/Dataset/P63_ruxian_1024 --continue_train --epoch_count 30 --n_epochs 40 --n_epochs_decay 30
 
+python test.py --name betatest_consist --model consistcycle --dataset_mode consist --gpu_ids 1 --batch_size 1 --netG resnet_6blocks --preprocess resize --load_size 512 --src_path /home/s611/Projects/wu/Dataset/P63_ruxian_1024 --epoch 20
 ## 修改的代码，第一次运行debug
 python train.py --name betatest_debug --model he2ihc --dataset_mode he2ihc --gpu_ids 0 --batch_size 4 --netG resnet_9blocks --preprocess resize --load_size 512 --src_path /home/f611/Projects/data/Dataset_171/P63_ruxian_1024 --n_epochs 70 --n_epochs_decay 80 --slice_list all --use_label
 

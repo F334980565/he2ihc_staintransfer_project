@@ -15,9 +15,9 @@ class ConsistDataset(BaseDataset): #这个是consistcycle用的数据集，目�
         BaseDataset.__init__(self, opt)
         
         #self.slice_list = opt.slice_list
-        self.predict_path = '/root/projects/wu/classify_project/probs_save/IHC_all/csv/probs.csv'
-        self.target_list = ['C152536']
-        self.src_list = ['A14946', 'A13923', 'A007418', 'A013564', 'A012607', 'C105560', 'A16746', 'A8827', 'C104494', 'C113327', 'A18480', 'C136881', 'A15331', 'A15520', 'C152536', 'C152280', 'C133447', 'A16886', 'A009798', 'C152221', 'A14053', 'A17244', 'A154421', 'A10032']
+        self.predict_path = '/home/s611/Projects/wu/he2ihc_classify_project/probs_save/IHC_all/csv/probs.csv'
+        self.target_list = ['A007418', 'A012607']
+        self.src_list = ['C105560', 'C104494', 'C113327', 'A007418', 'A012607']
         self.slice_dict = {}
         self.target_index_ranges = {}
         self.src_index_ranges = {}
@@ -90,7 +90,6 @@ class ConsistDataset(BaseDataset): #这个是consistcycle用的数据集，目�
                 predict = self.slice_dict[slice_name][2][relative_index]
                 cur_slice = slice_name
                 break
-        print('预测：', predict)
         
         #选取target切片中同一分类结果的图像作为参考图像，用iterator确保遍历
         if predict == 0:
