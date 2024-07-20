@@ -16,8 +16,8 @@ class ConsistDataset(BaseDataset): #这个是consistcycle用的数据集，目�
         
         #self.slice_list = opt.slice_list
         self.predict_path = '/home/s611/Projects/wu/he2ihc_classify_project/probs_save/IHC_all/csv/probs.csv'
-        self.target_list = ['A007418', 'A012607']
-        self.src_list = ['C105560', 'C104494', 'C113327', 'A007418', 'A012607']
+        self.target_list = ['A16886']
+        self.src_list = ['C105560', 'C104494', 'C113327']
         self.slice_dict = {}
         self.target_index_ranges = {}
         self.src_index_ranges = {}
@@ -108,7 +108,7 @@ class ConsistDataset(BaseDataset): #这个是consistcycle用的数据集，目�
         refer_tensor = transform(refer_img)
         ihc_tensor = transform(ihc_img)
 
-        return {'refer': refer_tensor, 'ihc': ihc_tensor, 'refer_path': refer_path, 'ihc_path': ihc_path, 'slice':cur_slice}
+        return {'refer': refer_tensor, 'ihc': ihc_tensor, 'refer_path': refer_path, 'ihc_path': ihc_path, 'slice':cur_slice, 'predict': predict}
 
     def __len__(self):
         """只计算src的数量"""

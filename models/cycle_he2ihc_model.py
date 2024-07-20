@@ -1,6 +1,7 @@
 import torch
 import os
 import itertools
+from collections import OrderedDict
 from util.image_pool import ImagePool
 from .base_model import BaseModel
 from . import networks
@@ -105,9 +106,9 @@ class Cyclehe2ihcModel(BaseModel):
 
         The option 'direction' can be used to swap domain A and domain B.
         """
-        self.real_A = input['he'].to(self.device)
-        self.real_B = input['ihc'].to(self.device)
-        self.image_paths = input['he_path']
+        self.real_A = input['A'].to(self.device)
+        self.real_B = input['B'].to(self.device)
+        self.image_paths = input['A_path']
         self.slice_name = os.path.basename(self.image_paths[0]).split('_')[0]
 
     def forward(self):
@@ -193,3 +194,13 @@ class Cyclehe2ihcModel(BaseModel):
         self.backward_D_A()      # calculate gradients for D_A
         self.backward_D_B()      # calculate graidents for D_B
         self.optimizer_D.step()  # update D_A and D_B's weights
+        
+    def get_current_visuals(self):
+        """Return visualization images. train.py will display these images with visdom, and save the images to a HTML"""
+        slice_name = self.slice_name
+        visual_ret = OrderedDict()
+        for name in self.visual_names:
+            if isinstance(name, str):
+                visual_ret[name] = getattr(self, name)
+  
+        return visual_ret, slice_name

@@ -425,11 +425,18 @@ python test_beta3.py --name betatest_P63fenlei --model ttttthe2ihc --dataset_mod
 ## consist model训练
 python train.py --name betatest_consist --model consistcycle --dataset_mode consist --gpu_ids 0 --batch_size 1 --netG resnet_6blocks --preprocess resize --load_size 512 --src_path /home/s611/Projects/wu/Dataset/P63_ruxian_1024 --continue_train --epoch_count 30 --n_epochs 40 --n_epochs_decay 30
 
-python test.py --name betatest_consist --model consistcycle --dataset_mode consist --gpu_ids 1 --batch_size 1 --netG resnet_6blocks --preprocess resize --load_size 512 --src_path /home/s611/Projects/wu/Dataset/P63_ruxian_1024 --epoch 20
+python test.py --name betatest_consist --model consistcycle --dataset_mode consist --gpu_ids 1 --batch_size 1 --netG resnet_6blocks --preprocess resize --load_size 512 --src_path /home/s611/Projects/wu/Dataset/P63_ruxian_1024 --epoch latest --num_test 100000000
+
+
+
+
 ## 修改的代码，第一次运行debug
 python train.py --name betatest_debug --model he2ihc --dataset_mode he2ihc --gpu_ids 0 --batch_size 4 --netG resnet_9blocks --preprocess resize --load_size 512 --src_path /home/f611/Projects/data/Dataset_171/P63_ruxian_1024 --n_epochs 70 --n_epochs_decay 80 --slice_list all --use_label
 
 ## 修改后的代码，用来拯救gongjin, 我觉得有机会
 python train.py --name betatest_P16 --model he2ihc --dataset_mode he2ihc --gpu_ids 0 --batch_size 8 --netG resnet_9blocks --preprocess crop --load_size 1024 --crop_size 512 --src_path /home/f611/Projects/data/Dataset_171/CIN_new/P16 --n_epochs 80 --n_epochs_decay 80 --slice_list all --continue_train --epoch_count 67
+
+## 跑个cyclegan的对比实验 P63的
+python train.py --name betatest_P63_cyclegan --model cycle_he2ihc --dataset_mode he2ihc --gpu_ids 1 --batch_size 1 --netG resnet_9blocks --preprocess resize --load_size 512 --crop_size 512 --src_path /home/s611/Projects/wu/Dataset/P63_ruxian_1024 --n_epochs 80 --n_epochs_decay 80 --slice_list A007418 A013564 A13923 A14053 A15331 A16746 A16886 A154421 C104494 C113327 --use_train_list
 
 

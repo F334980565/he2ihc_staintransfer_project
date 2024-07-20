@@ -162,14 +162,6 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
         net = UnetGenerator(input_nc, output_nc, 9, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
     elif netG == 'unet_1024':
         net = UnetGenerator(input_nc, output_nc, 10, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
-    elif netG == 'Unet':
-        net = U_Net(input_nc, output_nc)
-    elif netG == 'R2Unet':
-        net = R2U_Net(input_nc, output_nc, t=2)
-    elif netG == 'AttUnet':
-        net = AttU_Net(input_nc, output_nc)
-    elif netG == 'R2AttUnet':
-        net = R2AttU_Net(input_nc, output_nc, t=2)
     elif netG == 'ResnetAtt6blocks':
         net = ResnetAttentionGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=6)
     else:
@@ -295,50 +287,43 @@ class GANLoss(nn.Module):
     
 class TLoss(nn.Module):
 
-    def __init__(self, weights=[1, 1, 2, 2, 5, 5], discret=True):
+    def __init__(self, weights=[1, 1, 2, 2, 5, 5]):
         super(TLoss, self).__init__()
-        self.discret = discret
         self.weights = weights
         self.L1 = nn.L1Loss()
 
-    def __call__(self, real, fake):
+    def __call__(self, real, fake, k, real_params = [1.85, 0.5], fake_params = [1.85, 0.5]):
         real = (1 - real) / 2
         fake = (1 - fake) / 2
-        # 把反色步骤都放这里了，我感觉这样比较合理，就是不知道反色对网络本身是否有增益？
-        k = real.shape[-1] // 64
+        
         loss = 0
-        if self.discret:
-            outs_real, discret_real = self.T_function(real, k, self.discret) 
-            outs_fake, discret_fake = self.T_function(fake, k, self.discret)
-            loss_discret = 0
-        else:
-            outs_real = self.T_function(real, k, self.discret)
-            outs_fake = self.T_function(fake, k, self.discret)
+        loss_discret = 0
+        
+        outs_real, discret_real = self.T_function(real, k, real_params) 
+        outs_fake, discret_fake = self.T_function(fake, k, fake_params)
             
         for real_pool, fake_pool, weight in zip(outs_real, outs_fake, self.weights):
             loss += weight * self.L1(real_pool, fake_pool)
             
-        if self.discret:
-            loss_discret += self.L1(discret_fake[0], discret_real[0]) #这个是2*2的
-            loss_discret += self.L1(discret_fake[1], discret_real[1]) #这个是1维的
-            return loss, loss_discret
+        loss_discret += self.L1(discret_fake[0], discret_real[0]) #这个是2*2的
+        loss_discret += self.L1(discret_fake[1], discret_real[1]) #这个是1维的
         
-        return loss
+        return loss, loss_discret
     
-    def T_function(self, img_tensor, k, discret=False):
+    def T_function(self, img_tensor, k, discret_params = [1.85, 0.5]):
+        size = img_tensor.shape[-1]
         avg_pool_k = F.avg_pool2d(img_tensor, kernel_size=(k, k))
-        max_pool_2k = F.max_pool2d(avg_pool_k, kernel_size=(2, 2))
-        max_pool_4k = F.max_pool2d(avg_pool_k, kernel_size=(4, 4))
-        max_pool_8k = F.max_pool2d(avg_pool_k, kernel_size=(8, 8))
-        max_pool_16k = F.max_pool2d(avg_pool_k, kernel_size=(16, 16))
-        max_pool_32k = F.max_pool2d(avg_pool_k, kernel_size=(32, 32))
-        max_pool_64k = F.max_pool2d(avg_pool_k, kernel_size=(64, 64))
+        max_pool_2k = F.max_pool2d(avg_pool_k, kernel_size=(size // (32 * k), size // (32 * k)))
+        max_pool_4k = F.max_pool2d(avg_pool_k, kernel_size=(size // (16 * k), size // (16 * k)))
+        max_pool_8k = F.max_pool2d(avg_pool_k, kernel_size=(size // (8 * k), size // (8 * k)))
+        max_pool_16k = F.max_pool2d(avg_pool_k, kernel_size=(size // (4 * k), size // (4 * k)))
+        max_pool_32k = F.max_pool2d(avg_pool_k, kernel_size=(size // (2 * k), size // (2 * k)))
+        max_pool_64k = F.max_pool2d(avg_pool_k, kernel_size=(size // k, size // k))
         outputs = [avg_pool_k, max_pool_2k, max_pool_4k, max_pool_8k, max_pool_16k, max_pool_32k, max_pool_64k]
         
-        if discret:
-            discret_32k = self.discret_function(max_pool_32k)
-            discret_64k = self.discret_function(max_pool_64k)
-            outputs_discret = [discret_32k, discret_64k]
+        discret_32k = self.discret_function(max_pool_32k, discret_params)
+        discret_64k = self.discret_function(max_pool_64k, discret_params)
+        outputs_discret = [discret_32k, discret_64k]
             
         return outputs, outputs_discret
         

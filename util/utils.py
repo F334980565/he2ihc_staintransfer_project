@@ -90,7 +90,7 @@ class Logger():
         name = os.path.splitext(short_path)[0]
 
         for label, im_data in visuals.items():
-            img = self.tensor2img(im_data, invert=True)
+            img = self.tensor2img(im_data, invert=False)
             img.save(os.path.join(save_path, f'{name}_{label}.png'))
 
 def mkdir(path):

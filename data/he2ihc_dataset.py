@@ -28,11 +28,11 @@ class HE2IHCDataset(BaseDataset):
                 df = pd.read_csv((os.path.join(opt.src_path, slice_name, 'train_list.csv')))
                 slice_file_list = sorted(df['File Name'])
             else:
-                he_file_list = os.listdir(os.path.join(opt.src_path, slice_name, 'he_d4'))
-                ihc_file_list = os.listdir(os.path.join(opt.src_path, slice_name, 'ihc_d4'))
+                he_file_list = os.listdir(os.path.join(opt.src_path, slice_name, 'he'))
+                ihc_file_list = os.listdir(os.path.join(opt.src_path, slice_name, 'ihc'))
                 slice_file_list = sorted(list(set(he_file_list) & set(ihc_file_list)))
-            slice_he_paths = [os.path.join(opt.src_path, slice_name, 'he_d4', filename) for filename in slice_file_list]
-            slice_ihc_paths = [os.path.join(opt.src_path, slice_name, 'ihc_d4', filename) for filename in slice_file_list]
+            slice_he_paths = [os.path.join(opt.src_path, slice_name, 'he', filename) for filename in slice_file_list]
+            slice_ihc_paths = [os.path.join(opt.src_path, slice_name, 'ihc', filename) for filename in slice_file_list]
             
             self.slice_dict[slice_name] = [slice_he_paths, slice_ihc_paths]
             slice_len = len(self.slice_dict[slice_name][0])

@@ -62,7 +62,7 @@ class consistcycleModel(BaseModel):
         """
         BaseModel.__init__(self, opt)
         # specify the training losses you want to print out. The training/test scripts will call <BaseModel.get_current_losses>
-        self.loss_names = ['D_A', 'G_A', 'cycle_A', 'idt_A', 'D_B', 'G_B', 'cycle_B', 'idt_B'] #暂时把G_pred去掉了
+        self.loss_names = ['D_A', 'G_A', 'cycle_A_L1', 'cycle_A_lpips', 'idt_A', 'D_B', 'G_B', 'cycle_B_L1', 'cycle_B_lpips', 'idt_B'] #暂时把G_pred去掉了
         # specify the images you want to save/display. The training/test scripts will call <BaseModel.get_current_visuals>
         visual_names_A = ['real_A', 'fake_B', 'rec_A']
         visual_names_B = ['real_B', 'fake_A', 'rec_B']
@@ -91,6 +91,9 @@ class consistcycleModel(BaseModel):
             
             self.netD_B = networks.define_D(opt.input_nc, opt.ndf, opt.netD,
                                             opt.n_layers_D, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
+            
+            self.netD_B_condition = networks.define_D(opt.input_nc + 1, opt.ndf, opt.netD,
+                                            opt.n_layers_D, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
 
         if self.isTrain:
             if opt.lambda_identity > 0.0:  # only works when input and output images have the same number of channels
@@ -99,18 +102,22 @@ class consistcycleModel(BaseModel):
             #self.fake_B_pool = ImagePool(opt.pool_size)  # create image buffer to store previously generated images
             # define loss functions
             self.criterionGAN = networks.GANLoss(opt.gan_mode).to(self.device)  # define GAN loss.
-            self.criterionCycle = torch.nn.L1Loss()
-            self.criterionIdt = torch.nn.L1Loss()
+            self.criterionT = networks.TLoss().to(self.device)
+            self.criterionCycle_L1 = torch.nn.L1Loss().to(self.device)
+            self.criterionCycle_lpips = self.criterionLpips = lpips.LPIPS(net='vgg', eval_mode=True).eval().requires_grad_(False).to(self.device)
+            self.criterionIdt = torch.nn.L1Loss().to(self.device)
   
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
             self.optimizer_G_A = torch.optim.AdamW(self.netG_A.parameters(), lr=opt.lr_G_A, betas=(opt.beta1, 0.999))
             self.optimizer_G_B = torch.optim.AdamW(self.netG_B.parameters(), lr=opt.lr_G_B, betas=(opt.beta1, 0.999))
             self.optimizer_D_A = torch.optim.AdamW(self.netD_A.parameters(), lr=opt.lr_D_A, betas=(opt.beta1, 0.999))
             self.optimizer_D_B = torch.optim.AdamW(self.netD_B.parameters(), lr=opt.lr_D_B, betas=(opt.beta1, 0.999))
+            self.optimizer_D_B_condition = torch.optim.AdamW(self.netD_B_condition.parameters(), lr=opt.lr_D_B, betas=(opt.beta1, 0.999))
             self.optimizers.append(self.optimizer_G_A)
             self.optimizers.append(self.optimizer_G_B)
             self.optimizers.append(self.optimizer_D_A)
             self.optimizers.append(self.optimizer_D_B)
+            self.optimizers.append(self.optimizer_D_B_condition)
 
     def set_input(self, input):
         """Unpack input data from the dataloader and perform necessary pre-processing steps.
@@ -120,10 +127,11 @@ class consistcycleModel(BaseModel):
 
         The option 'direction' can be used to swap domain A and domain B.
         """
-        self.real_A = input['refer'].to(self.device)
+        self.real_A = input['refer'].to(self.device) #这里AB反了，但也无所谓了
         self.real_B = input['ihc'].to(self.device)
         self.refer_path = input['refer_path']
         self.ihc_path = input['ihc_path']
+        self.condition = input['predict']
         self.slice_name = input['slice'] #这个slice_name是用来记录保存的训练图像来自哪个切片的, 因为一个batch里只保存第一张，所以只记录第一张的图像名
 
     def forward(self):
@@ -132,6 +140,8 @@ class consistcycleModel(BaseModel):
         self.rec_A = self.netG_B(self.fake_B)   # G_B(G_A(A))
         self.fake_A = self.netG_B(self.real_B)  # G_B(B)
         self.rec_B = self.netG_A(self.fake_A)   # G_A(G_B(B))
+        self.real_A_conditioned = self.get_conditioned(self.real_A, self.condition)
+        self.fake_A_conditioned = self.get_conditioned(self.fake_A, self.condition)
 
     def backward_D_basic(self, netD, real, fake, source):
         """Calculate GAN loss for the discriminator
@@ -167,6 +177,7 @@ class consistcycleModel(BaseModel):
         """Calculate GAN loss for discriminator D_B"""
         #fake_A = self.fake_A_pool.query(self.fake_A)
         self.loss_D_B = self.backward_D_basic(self.netD_B, self.real_A, self.fake_A, self.real_B)
+        self.loss_D_B_conditioned = self.backward_D_basic(self.netD_B_condition, self.real_A_conditioned, self.fake_A_conditioned, self.real_B)
 
     def backward_G_A(self):
         """Calculate the loss for generators G_A and G_B"""
@@ -183,9 +194,12 @@ class consistcycleModel(BaseModel):
         # GAN loss D_A(G_A(A))
         self.loss_G_A = self.criterionGAN(self.netD_A(self.fake_B), True)
         # Forward cycle loss || G_B(G_A(A)) - A||
-        self.loss_cycle_A = self.criterionCycle(self.rec_A, self.real_A) * lambda_A
+        self.loss_cycle_A_L1 = self.criterionCycle_L1(self.rec_A, self.real_A) * lambda_A
+        self.loss_cycle_A_lpips = self.criterionCycle_lpips(self.rec_A, self.real_A) * lambda_A
+        #_, loss_T_discret = self.criterionT(self.real_A, self.fake_B, k = 8, real_params = [1.85, 0.5], fake_params = [1.85, 0.5]) # 现在就是要找到这个参数, 结果找不到, md
         # combined loss and calculate gradients
-        self.loss_G_A = self.loss_G_A + self.loss_cycle_A + self.loss_idt_A #如果是为了风格统一可以加一个ssim_loss之类的
+        
+        self.loss_G_A = self.loss_G_A + self.loss_cycle_A_L1 + self.loss_cycle_A_lpips + self.loss_idt_A #如果是为了风格统一可以加一个ssim_loss之类的
         self.loss_G_A.backward()
         
     def backward_G_B(self):
@@ -203,8 +217,10 @@ class consistcycleModel(BaseModel):
         # GAN loss D_B(G_B(B))
         self.loss_G_B = self.criterionGAN(self.netD_B(self.fake_A), True)
         # Backward cycle loss || G_A(G_B(B)) - B||
-        self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B) * lambda_B
-        self.loss_G_B = self.loss_G_B + self.loss_cycle_B + self.loss_idt_B
+        self.loss_cycle_B_L1 = self.criterionCycle_L1(self.rec_B, self.real_B) * lambda_B
+        self.loss_cycle_B_lpips = self.criterionCycle_lpips(self.rec_B, self.real_B) * lambda_B
+        
+        self.loss_G_B = self.loss_G_B + self.loss_cycle_B_L1 + self.loss_cycle_B_lpips + self.loss_idt_B
         self.loss_G_B.backward()
 
     def optimize_parameters(self):
@@ -226,7 +242,14 @@ class consistcycleModel(BaseModel):
         self.backward_D_A()      # calculate gradients for D_A
         self.backward_D_B()      # calculate graidents for D_B
         self.optimizer_D_A.step()  # update D_A and D_B's weights
-        self.optimizer_D_B.step() 
+        self.optimizer_D_B.step()
+        
+    def get_conditioned(self, image, condition):
+        condition_tensor = condition.view(-1, 1, 1, 1).expand(-1, 1, image.shape[2], image.shape[3]).to(self.device)
+        concated_tensor = torch.cat((image, condition_tensor), dim=1).to(self.device)
+        
+        return concated_tensor
+         
         
     def get_current_visuals(self):
         """Return visualization images. train.py will display these images with visdom, and save the images to a HTML"""
