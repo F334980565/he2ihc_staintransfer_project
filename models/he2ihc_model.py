@@ -67,7 +67,7 @@ class HE2IHCModel(BaseModel):
         """
         BaseModel.__init__(self, opt)
         # specify the training losses you want to print out. The training/test scripts will call <BaseModel.get_current_losses>
-        self.loss_names = ['D_A', 'G_A', 'G_GAN', 'G_lpips', 'G_L1', 'G_T', 'G_discret'] #加了个G_consist
+        self.loss_names = ['D_A', 'G_A', 'G_GAN', 'G_lpips', 'G_L1', 'G_T', 'G_discret']
         # specify the images you want to save/display. The training/test scripts will call <BaseModel.get_current_visuals>
 
         self.visual_names = ['real_A', 'real_B', 'fake_B']  # combine visualizations for A and B

@@ -10,7 +10,7 @@ import torchvision.transforms as transforms
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-class HE2IHCDataset(BaseDataset):
+class HE2IHCtempDataset(BaseDataset):
     def __init__(self, opt):
         BaseDataset.__init__(self, opt)
         
@@ -22,7 +22,7 @@ class HE2IHCDataset(BaseDataset):
             self.slice_list = sorted([d for d in os.listdir(self.src_path) if os.path.isdir(os.path.join(self.src_path, d))])
         self.slice_dict = {}
         self.index_ranges = {}
-        self.map = {0: 1, 1: -1, 2: 0} #思来想去作为label还是该给这种值吧？
+        self.map = {0: 1, 1: -1, 2: 0} #思来想去作为label还是该给这种值吧？woc 最后用的是哪个？？？？
         current_index = 0
         
         for slice_name in self.slice_list:
@@ -87,9 +87,9 @@ class HE2IHCDataset(BaseDataset):
         ihc_tensor = transform(ihc_img)
         
         if self.label_path == None:
-            label, label_tensor = self.get_label_tensor(ihc_tensor, params = [8, 1.85, 0.5])
+            label, label_tensor = self.get_label_tensor(ihc_tensor, params = [8, 2.25, 0.7])
         else:
-            _, label_tensor = self.get_label_tensor(ihc_tensor, params = [8, 1.85, 0.5])
+            _, label_tensor = self.get_label_tensor(ihc_tensor, params = [8, 2.25, 0.7])
     
         data = {'A': he_tensor, 'B': ihc_tensor, 'A_path': he_path, 'B_path': ihc_path, 'label': label, 'label_tensor': label_tensor, 'slice':cur_slice}
             
@@ -104,7 +104,7 @@ class HE2IHCDataset(BaseDataset):
             
         return n
     
-    def get_label_tensor(self, img_tensor, params = [8, 1.85, 0.5]):
+    def get_label_tensor(self, img_tensor, params = [8, 2.25, 0.7]):
         
         img_tensor = (1 - img_tensor) / 2
         img_size = img_tensor.shape[-1]
@@ -112,7 +112,7 @@ class HE2IHCDataset(BaseDataset):
         avg_pool_8 = F.avg_pool2d(img_tensor, kernel_size=(k, k))
         max_pool_256 = F.max_pool2d(avg_pool_8, kernel_size=(img_size // (2*k), img_size // (2*k)))
         max_pool_512 = F.max_pool2d(avg_pool_8, kernel_size=(img_size // k, img_size // k))
-        sum = max_pool_512.sum()
+        sum = 0.0 * max_pool_512[0] + 0.0 * max_pool_512[1] + 3.0 * max_pool_512[2]
         if sum > positive_threshold: #
             label = 1
         elif sum <= positive_threshold and sum >= background_threshold:

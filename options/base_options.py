@@ -29,8 +29,7 @@ class BaseOptions():
         parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
         parser.add_argument('--slice_list', nargs='+', help='List of slice names')
         parser.add_argument('--src_path', type=str, help='slice所在的路径')
-        parser.add_argument('--predict_path', help='分类器预测的csv存放的路径')
-        parser.add_argument('--use_label', action='store_true', help='是否使用pool得到的标签进行训练')
+        parser.add_argument('--label_path', help='分类器预测的csv存放的路径')
         # model parameters
         parser.add_argument('--model', type=str, default='cycle_gan', help='chooses which model to use. [cycle_gan | pix2pix | test | colorization]')
         parser.add_argument('--input_nc', type=int, default=3, help='# of input image channels: 3 for RGB and 1 for grayscale')
@@ -61,6 +60,9 @@ class BaseOptions():
         parser.add_argument('--load_iter', type=int, default='0', help='which iteration to load? if load_iter > 0, the code will load models by iter_[load_iter]; otherwise, the code will load models by [epoch]')
         parser.add_argument('--verbose', action='store_true', help='if specified, print more debugging information')
         parser.add_argument('--suffix', default='', type=str, help='customized suffix: opt.name = opt.name + suffix: e.g., {model}_{netG}_size{load_size}')
+        # 后加的
+        parser.add_argument('--use_train_list', action='store_true', help='使用train_list里的文件, 筛选阈值有些区别, 会更快些, 先用这个训完再用整体数据集微调？')
+        parser.add_argument('--no_ihc', action='store_true', help='少存重复图片')
         self.initialized = True
         return parser
 

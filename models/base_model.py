@@ -69,6 +69,11 @@ class BaseModel(ABC):
     def forward(self):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
         pass
+    
+    @abstractmethod
+    def forward_test(self):
+        """Run forward pass; called by both functions <optimize_parameters> and <test>."""
+        pass
 
     @abstractmethod
     def optimize_parameters(self):

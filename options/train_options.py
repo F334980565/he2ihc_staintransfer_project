@@ -36,7 +36,6 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--lr_policy', type=str, default='linear', help='learning rate policy. [linear | step | plateau | cosine]')
         parser.add_argument('--lr_decay_iters', type=int, default=50, help='multiply by a gamma every lr_decay_iters iterations')
         # 数据集选择 
-        parser.add_argument('--use_train_list', action='store_true', help='使用train_list里的文件, 筛选阈值有些区别, 会更快些')
 
         self.isTrain = True
         return parser

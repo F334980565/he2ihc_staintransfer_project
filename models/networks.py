@@ -6,6 +6,7 @@ from torch.optim import lr_scheduler
 import math
 import torch.nn.functional as F
 from torch.autograd import Variable
+import torchvision.models as models
 import numpy as np
 
 ###############################################################################
@@ -292,15 +293,15 @@ class TLoss(nn.Module):
         self.weights = weights
         self.L1 = nn.L1Loss()
 
-    def __call__(self, real, fake, k, real_params = [1.85, 0.5], fake_params = [1.85, 0.5]):
+    def __call__(self, real, fake, real_params = [8, 1.85, 0.5], fake_params = [8, 1.85, 0.5]):
         real = (1 - real) / 2
         fake = (1 - fake) / 2
         
         loss = 0
         loss_discret = 0
         
-        outs_real, discret_real = self.T_function(real, k, real_params) 
-        outs_fake, discret_fake = self.T_function(fake, k, fake_params)
+        outs_real, discret_real = self.T_function(real, real_params) 
+        outs_fake, discret_fake = self.T_function(fake, fake_params)
             
         for real_pool, fake_pool, weight in zip(outs_real, outs_fake, self.weights):
             loss += weight * self.L1(real_pool, fake_pool)
@@ -310,8 +311,9 @@ class TLoss(nn.Module):
         
         return loss, loss_discret
     
-    def T_function(self, img_tensor, k, discret_params = [1.85, 0.5]):
+    def T_function(self, img_tensor, params = [8, 1.85, 0.5]):
         size = img_tensor.shape[-1]
+        k, positive_thres, background_thres = params
         avg_pool_k = F.avg_pool2d(img_tensor, kernel_size=(k, k))
         max_pool_2k = F.max_pool2d(avg_pool_k, kernel_size=(size // (32 * k), size // (32 * k)))
         max_pool_4k = F.max_pool2d(avg_pool_k, kernel_size=(size // (16 * k), size // (16 * k)))
@@ -321,8 +323,8 @@ class TLoss(nn.Module):
         max_pool_64k = F.max_pool2d(avg_pool_k, kernel_size=(size // k, size // k))
         outputs = [avg_pool_k, max_pool_2k, max_pool_4k, max_pool_8k, max_pool_16k, max_pool_32k, max_pool_64k]
         
-        discret_32k = self.discret_function(max_pool_32k, discret_params)
-        discret_64k = self.discret_function(max_pool_64k, discret_params)
+        discret_32k = self.discret_function(max_pool_32k, [positive_thres, background_thres])
+        discret_64k = self.discret_function(max_pool_64k, [positive_thres, background_thres])
         outputs_discret = [discret_32k, discret_64k]
             
         return outputs, outputs_discret
@@ -769,4 +771,39 @@ class PixelDiscriminator(nn.Module):
     def forward(self, input):
         """Standard forward."""
         return self.net(input)
+    
+class HE_resnet50_old(nn.Module):
+    def __init__(self, num_classes=3):
+        super(HE_resnet50, self).__init__()
+        
+        # 加载预训练的 ResNet-50 模型
+        self.classifier = models.resnet50(pretrained=True)
+        
+        # 修改最后一个全连接层以适应 num_classes 类分类
+        num_features = self.classifier.fc.in_features
+        self.classifier.fc = nn.Sequential(
+        nn.Linear(num_features, 3),
+        nn.Softmax(dim=1)
+        )
+    
+    def forward(self, x):
+        return self.classifier(x)
+    
+class HE_resnet50(nn.Module):
+    def __init__(self, num_classes=3):
+        super(HE_resnet50, self).__init__()
+        
+        # 加载预训练的 ResNet-50 模型
+        self.classifier = models.resnet50(pretrained=True)
+        
+        # 修改最后一个全连接层以适应 num_classes 类分类
+        num_features = self.classifier.fc.in_features
+        self.classifier.fc = nn.Linear(num_features, 3)
+    
+    def forward(self, x):
+        outputs = self.classifier(x)
+        predict = F.softmax(outputs, dim=1)
+        predict = torch.argmax(predict, 1)
+        
+        return predict
 
